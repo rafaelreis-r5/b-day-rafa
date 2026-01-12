@@ -172,7 +172,7 @@ const Game: React.FC = () => {
 
   // --- VIEWS ---
 
-  const IntroView = () => (
+  const renderIntroView = () => (
     <div className="relative group w-full h-full min-h-[400px]">
       <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
       <div className="relative px-7 py-10 bg-gray-900/80 backdrop-blur-xl rounded-xl leading-none flex flex-col items-center justify-center border border-white/10 shadow-2xl h-full">
@@ -206,7 +206,7 @@ const Game: React.FC = () => {
     </div>
   );
 
-  const GameOverView = () => (
+  const renderGameOverView = () => (
     <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-xl shadow-[0_0_50px_rgba(34,197,94,0.2)] text-center w-full h-full flex flex-col justify-center items-center">
       <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-green-400 to-emerald-600 mb-6 drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">
         GAME OVER
@@ -229,7 +229,7 @@ const Game: React.FC = () => {
     </div>
   );
 
-  const ActiveGameView = () => {
+  const renderActiveGameView = () => {
     const question = gameQuestions[currentQuestionIndex];
     if (!question) return null;
 
@@ -294,7 +294,7 @@ const Game: React.FC = () => {
     );
   };
 
-  const LeaderboardView = () => (
+  const renderLeaderboardView = () => (
     <div className="bg-gray-900/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 h-full min-h-[500px] shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] flex flex-col">
       <h3 className="text-xl font-bold text-cyan-400 mb-6 border-b border-cyan-500/30 pb-4 flex items-center tracking-widest uppercase">
         <span className="mr-3 text-2xl">🏆</span> Ranking
@@ -350,12 +350,12 @@ const Game: React.FC = () => {
         
         {/* Coluna do Jogo (Ocupa 2/3 em telas grandes) */}
         <div className="lg:col-span-2 h-full">
-           {showIntroModal ? <IntroView /> : gameOver ? <GameOverView /> : <ActiveGameView />}
+           {showIntroModal ? renderIntroView() : gameOver ? renderGameOverView() : renderActiveGameView()}
         </div>
 
         {/* Coluna do Ranking (Ocupa 1/3) */}
         <div className="lg:col-span-1 h-full">
-          <LeaderboardView />
+          {renderLeaderboardView()}
         </div>
         
       </div>
