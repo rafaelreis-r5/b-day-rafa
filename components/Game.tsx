@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { QUESTIONS } from '../constants';
+import { QUESTIONS, SHEETS_ENDPOINT } from '../constants';
 import { GameResult, Question } from '../types';
 
 // Algoritmo de Fisher-Yates para embaralhar
@@ -21,10 +21,16 @@ const Game: React.FC = () => {
   const [showIntroModal, setShowIntroModal] = useState(true);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [leaderboard, setLeaderboard] = useState<GameResult[]>([]);
+  const hasSheetsEndpoint = Boolean(SHEETS_ENDPOINT && !SHEETS_ENDPOINT.includes('REPLACE'));
 
   // Carrega o ranking ao montar
   useEffect(() => {
     loadLeaderboard();
+    if (!hasSheetsEndpoint) return;
+    const interval = setInterval(() => {
+      loadLeaderboard();
+    }, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   // Embaralha as perguntas sempre que o jogo inicia ou reinicia
@@ -36,6 +42,7 @@ const Game: React.FC = () => {
       setGameOver(false);
       setShowIntroModal(false);
       setFeedback(null);
+      updateRanking(0);
     }
   };
 
@@ -46,35 +53,74 @@ const Game: React.FC = () => {
     loadLeaderboard(); // Atualiza ranking ao reiniciar
   };
 
-  const loadLeaderboard = () => {
+  const loadLeaderboard = async () => {
+    if (hasSheetsEndpoint) {
+      try {
+        const response = await fetch(`${SHEETS_ENDPOINT}?type=ranking`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Failed to load ranking.');
+        const data = await response.json();
+        const parsed: GameResult[] = (data.ranking || []).map((entry: GameResult) => ({
+          player: entry.player,
+          score: entry.score,
+          timestamp: entry.timestamp
+        }));
+        parsed.sort((a, b) => b.score - a.score);
+        setLeaderboard(parsed.slice(0, 10));
+        return;
+      } catch (error) {
+        // Fall back to local storage when remote fails
+      }
+    }
+
     const existing = localStorage.getItem('gameLeaderboard');
     if (existing) {
       const parsed: GameResult[] = JSON.parse(existing);
-      // Ordena por maior pontuação
       parsed.sort((a, b) => b.score - a.score);
-      setLeaderboard(parsed.slice(0, 10)); // Top 10
+      setLeaderboard(parsed.slice(0, 10));
     }
   };
 
-  const saveScore = (finalScore: number) => {
-    if (!playerName) return;
+  const saveScoreLocal = (result: GameResult) => {
+    const existing = localStorage.getItem('gameLeaderboard');
+    const currentList: GameResult[] = existing ? JSON.parse(existing) : [];
+    const existingIndex = currentList.findIndex(entry => entry.player === result.player);
+    if (existingIndex >= 0) {
+      currentList[existingIndex] = result;
+    } else {
+      currentList.push(result);
+    }
+    localStorage.setItem('gameLeaderboard', JSON.stringify(currentList));
+  };
+
+  const updateRanking = async (currentScore: number) => {
+    if (!playerName.trim()) return;
     const result: GameResult = {
-      player: playerName,
-      score: finalScore,
+      player: playerName.trim(),
+      score: currentScore,
       timestamp: Date.now()
     };
-    
-    const existing = localStorage.getItem('gameLeaderboard');
-    const currentList = existing ? JSON.parse(existing) : [];
-    currentList.push(result);
-    localStorage.setItem('gameLeaderboard', JSON.stringify(currentList));
-    
+
+    saveScoreLocal(result);
+
+    if (hasSheetsEndpoint) {
+      try {
+        await fetch(SHEETS_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'ranking', ...result })
+        });
+      } catch (error) {
+        // Keep local fallback when remote fails
+      }
+    }
+
     loadLeaderboard();
   };
 
   const handleAnswer = (isTruth: boolean) => {
     const question = gameQuestions[currentQuestionIndex];
     const isCorrect = question.isTruth === isTruth;
+    const nextScore = score + (isCorrect ? 1 : 0);
 
     if (isCorrect) {
       setScore(prev => prev + 1);
@@ -83,13 +129,14 @@ const Game: React.FC = () => {
       setFeedback('wrong');
     }
 
+    updateRanking(nextScore);
+
     setTimeout(() => {
       setFeedback(null);
       if (currentQuestionIndex < gameQuestions.length - 1) {
         setCurrentQuestionIndex(prev => prev + 1);
       } else {
         setGameOver(true);
-        saveScore(score + (isCorrect ? 1 : 0));
       }
     }, 800);
   };

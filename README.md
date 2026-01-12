@@ -19,18 +19,41 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ulEzhDTG8j4xS5pNvTXIsT
 3. Run the app:
    `npm run dev`
 
-## Google Sheets (RSVP backend)
+## Google Sheets (RSVP + Ranking backend)
 
-This app sends each guest as a separate row to a Google Sheet using Apps Script.
+This app sends each guest as a separate row to a Google Sheet using Apps Script, and keeps the game ranking synced in another tab.
 
-1. Create a Google Sheet with a tab named `Guests` and add a header row (Name, Host, Type, Timestamp).
+1. Create a Google Sheet with two tabs:
+   - `Guests` (header row: Name, Host, Type, Timestamp)
+   - `Ranking` (header row: Player, Score, UpdatedAt)
 2. Open Extensions -> Apps Script and paste this code:
 
 ```javascript
 const SHEET_NAME = 'Guests';
+const RANKING_SHEET_NAME = 'Ranking';
 
 function doPost(e) {
   const payload = JSON.parse(e.postData.contents || '{}');
+  const type = payload.type || 'guests';
+
+  if (type === 'ranking') {
+    return upsertRanking(payload);
+  }
+
+  return saveGuests(payload);
+}
+
+function doGet(e) {
+  const type = (e && e.parameter && e.parameter.type) ? e.parameter.type : 'guests';
+
+  if (type === 'ranking') {
+    return getRanking();
+  }
+
+  return getGuests();
+}
+
+function saveGuests(payload) {
   const guests = payload.guests || [];
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
 
@@ -52,7 +75,7 @@ function doPost(e) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function doGet() {
+function getGuests() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
   if (!sheet) {
     return ContentService.createTextOutput(JSON.stringify({ guests: [] }))
@@ -70,13 +93,67 @@ function doGet() {
   return ContentService.createTextOutput(JSON.stringify({ guests }))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+function upsertRanking(payload) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(RANKING_SHEET_NAME);
+  const player = (payload.player || '').toString().trim();
+  const score = Number(payload.score || 0);
+  const timestamp = payload.timestamp ? new Date(payload.timestamp) : new Date();
+
+  if (!sheet || !player) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const values = sheet.getDataRange().getValues();
+  let targetRow = -1;
+
+  for (var i = 1; i < values.length; i++) {
+    if ((values[i][0] || '').toString().trim() === player) {
+      targetRow = i + 1;
+      break;
+    }
+  }
+
+  if (targetRow == -1) {
+    sheet.appendRow([player, score, timestamp.toISOString()]);
+  } else {
+    sheet.getRange(targetRow, 1, 1, 3).setValues([[player, score, timestamp.toISOString()]]);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getRanking() {
+  const sheet = SpreadsheetApp.getActive().getSheetByName(RANKING_SHEET_NAME);
+  if (!sheet) {
+    return ContentService.createTextOutput(JSON.stringify({ ranking: [] }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const ranking = values.slice(1).map(row => ({
+    player: row[0],
+    score: Number(row[1] || 0),
+    timestamp: row[2] ? new Date(row[2]).getTime() : Date.now()
+  }));
+
+  return ContentService.createTextOutput(JSON.stringify({ ranking }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 ```
 
 3. Deploy as Web App (Execute as: Me, Who has access: Anyone).
 4. Copy the Web App URL and replace `SHEETS_ENDPOINT` in `constants.ts`.
 
 Sheet columns:
-- Column A: Guest name
-- Column B: Host name (the person who filled the form)
-- Column C: `host` or `guest`
-- Column D: Timestamp (ISO string)
+- Guests tab:
+  - Column A: Name
+  - Column B: Host
+  - Column C: `host` or `guest`
+  - Column D: Timestamp (ISO string)
+- Ranking tab:
+  - Column A: Player
+  - Column B: Score
+  - Column C: UpdatedAt (ISO string)

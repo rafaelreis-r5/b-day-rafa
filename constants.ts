@@ -2,7 +2,7 @@ import { Question } from './types';
 
 export const MAP_EMBED_URL = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3656.978864826197!2d-46.77259652396344!3d-23.535263960012586!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ceff8bd0490001%3A0x6646538053457007!2sR.%20Alice%20Manholer%20Piteri%2C%20122%20-%20Bela%20Vista%2C%20Osasco%20-%20SP%2C%2006018-160!5e0!3m2!1sen!2sbr!4v1705000000000!5m2!1sen!2sbr";
 
-export const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbyMg52egdMrRCR3HAQIVz4LO3NOwsMJ2fNOWJ8hfQtVCbnt_QMBDvVxsclfcUwKLSz8wg/exec";
+export const SHEETS_ENDPOINT = "https://script.google.com/macros/s/AKfycbzhRGUKqrFP6kvEDB7JMX0WptABKPo8_iA5sZ0ST9YBBtbMd1zVl86tYTwzDerA2FFKzA/exec";
 
 export const QUESTIONS: Question[] = [
   { id: 1, text: "Rafael já queimou o rosto com óleo fervendo aos 10 anos, ficou um mês internado e passou por raspagem de pele.", isTruth: true },
