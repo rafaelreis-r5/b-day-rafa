@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Guest, GameResult } from '../types';
+import { Convidado, GameResult } from '../types';
 import { SHEETS_ENDPOINT } from '../constants';
 
 interface AdminProps {
@@ -37,38 +37,38 @@ const loadJsonp = <T,>(url: string, timeoutMs = 8000): Promise<T> => {
 };
 
 const Admin: React.FC<AdminProps> = ({ onLogout }) => {
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const [convidados, setConvidados] = useState<Convidado[]>([]);
   const [scores, setScores] = useState<GameResult[]>([]);
-  const [activeTab, setActiveTab] = useState<'guests' | 'ranking'>('guests');
+  const [activeTab, setActiveTab] = useState<'convidados' | 'ranking'>('convidados');
 
   useEffect(() => {
-    const loadGuests = async () => {
+    const loadConvidados = async () => {
       const hasSheetsEndpoint = SHEETS_ENDPOINT && !SHEETS_ENDPOINT.includes('REPLACE');
 
       if (hasSheetsEndpoint) {
         try {
-          const data = await loadJsonp<{ guests: Guest[] }>(`${SHEETS_ENDPOINT}?type=guests`);
-          const parsedGuests: Guest[] = (data.guests || []).map((guest: Guest, index: number) => ({
-            id: guest.id || `${guest.timestamp || Date.now()}-${index}`,
-            name: guest.name,
-            host: guest.host,
-            isHost: guest.isHost,
-            timestamp: guest.timestamp
+          const data = await loadJsonp<{ convidados: Convidado[] }>(`${SHEETS_ENDPOINT}?type=convidados`);
+          const parsedConvidados: Convidado[] = (data.convidados || []).map((convidado: Convidado, index: number) => ({
+            id: convidado.id || `${convidado.timestamp || Date.now()}-${index}`,
+            name: convidado.name,
+            host: convidado.host,
+            isHost: convidado.isHost,
+            timestamp: convidado.timestamp
           }));
-          setGuests(parsedGuests);
+          setConvidados(parsedConvidados);
           return;
         } catch (error) {
           // Fall back to local storage when remote fails
         }
       }
 
-      const storedGuests = localStorage.getItem('guestList');
-      if (storedGuests) {
-        setGuests(JSON.parse(storedGuests));
+      const storedConvidados = localStorage.getItem('convidadosList');
+      if (storedConvidados) {
+        setConvidados(JSON.parse(storedConvidados));
       }
     };
 
-    loadGuests();
+    loadConvidados();
 
     const storedScores = localStorage.getItem('gameLeaderboard');
     if (storedScores) {
@@ -94,10 +94,10 @@ const Admin: React.FC<AdminProps> = ({ onLogout }) => {
 
         <div className="flex gap-4 mb-6">
           <button
-            onClick={() => setActiveTab('guests')}
-            className={`px-6 py-2 rounded font-bold ${activeTab === 'guests' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+            onClick={() => setActiveTab('convidados')}
+            className={`px-6 py-2 rounded font-bold ${activeTab === 'convidados' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}
           >
-            LISTA DE CONVIDADOS ({guests.length})
+            LISTA DE CONVIDADOS ({convidados.length})
           </button>
           <button
             onClick={() => setActiveTab('ranking')}
@@ -108,7 +108,7 @@ const Admin: React.FC<AdminProps> = ({ onLogout }) => {
         </div>
 
         <div className="bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-700">
-          {activeTab === 'guests' ? (
+          {activeTab === 'convidados' ? (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -120,16 +120,16 @@ const Admin: React.FC<AdminProps> = ({ onLogout }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {guests.length === 0 ? (
+                  {convidados.length === 0 ? (
                     <tr><td colSpan={4} className="p-4 text-center text-gray-500">Nenhum convidado registrado.</td></tr>
                   ) : (
-                    guests.map((guest) => (
-                      <tr key={guest.id} className="hover:bg-gray-700 transition">
-                        <td className="p-4 font-bold text-white">{guest.name}</td>
-                        <td className="p-4 text-gray-300">{guest.host || '-'}</td>
-                        <td className="p-4 text-gray-300">{guest.isHost ? 'Host' : 'Convidado'}</td>
+                    convidados.map((convidado) => (
+                      <tr key={convidado.id} className="hover:bg-gray-700 transition">
+                        <td className="p-4 font-bold text-white">{convidado.name}</td>
+                        <td className="p-4 text-gray-300">{convidado.host || '-'}</td>
+                        <td className="p-4 text-gray-300">{convidado.isHost ? 'Host' : 'Convidado'}</td>
                         <td className="p-4 text-gray-500 text-sm">
-                          {new Date(guest.timestamp).toLocaleString('pt-BR')}
+                          {new Date(convidado.timestamp).toLocaleString('pt-BR')}
                         </td>
                       </tr>
                     ))

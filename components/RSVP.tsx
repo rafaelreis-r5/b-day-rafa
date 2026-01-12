@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Guest } from '../types';
+import { Convidado } from '../types';
 import { SHEETS_ENDPOINT } from '../constants';
 
 const RSVP: React.FC = () => {
@@ -44,7 +44,7 @@ const RSVP: React.FC = () => {
       }))
     ];
 
-    const guests: Guest[] = baseRows.map((row, index) => ({
+    const convidados: Convidado[] = baseRows.map((row, index) => ({
       id: `${timestamp}-${index}`,
       ...row
     }));
@@ -54,12 +54,12 @@ const RSVP: React.FC = () => {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ guests })
+        body: JSON.stringify({ convidados })
       });
 
-      const existingData = localStorage.getItem('guestList');
-      const storedGuests = existingData ? JSON.parse(existingData) : [];
-      localStorage.setItem('guestList', JSON.stringify([...storedGuests, ...guests]));
+      const existingData = localStorage.getItem('convidadosList');
+      const storedConvidados = existingData ? JSON.parse(existingData) : [];
+      localStorage.setItem('convidadosList', JSON.stringify([...storedConvidados, ...convidados]));
 
       setSubmitted(true);
       setName('');

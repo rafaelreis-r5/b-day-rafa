@@ -21,37 +21,37 @@ View your app in AI Studio: https://ai.studio/apps/drive/1ulEzhDTG8j4xS5pNvTXIsT
 
 ## Google Sheets (RSVP + Ranking backend)
 
-This app sends each guest as a separate row to a Google Sheet using Apps Script, and keeps the game ranking synced in another tab.
+This app sends each convidado as a separate row to a Google Sheet using Apps Script, and keeps the game ranking synced in another tab.
 
 1. Create a Google Sheet with two tabs:
-   - `Guests` (header row: Name, Host, Type, Timestamp)
+   - `Convidados` (header row: Name, Host, Type, Timestamp)
    - `Ranking` (header row: Player, Score, UpdatedAt)
 2. Open Extensions -> Apps Script and paste this code:
 
 ```javascript
-const SHEET_NAME = 'Guests';
+const SHEET_NAME = 'Convidados';
 const RANKING_SHEET_NAME = 'Ranking';
 
 function doPost(e) {
   const payload = JSON.parse(e.postData.contents || '{}');
-  const type = payload.type || 'guests';
+  const type = payload.type || 'convidados';
 
   if (type === 'ranking') {
     return upsertRanking(payload);
   }
 
-  return saveGuests(payload);
+  return saveConvidados(payload);
 }
 
 function doGet(e) {
-  const type = (e && e.parameter && e.parameter.type) ? e.parameter.type : 'guests';
+  const type = (e && e.parameter && e.parameter.type) ? e.parameter.type : 'convidados';
   const callback = (e && e.parameter && e.parameter.callback) ? e.parameter.callback : '';
 
   if (type === 'ranking') {
     return outputJson(getRanking(), callback);
   }
 
-  return outputJson(getGuests(), callback);
+  return outputJson(getConvidados(), callback);
 }
 
 function outputJson(payload, callback) {
@@ -60,20 +60,20 @@ function outputJson(payload, callback) {
   return output.setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
 }
 
-function saveGuests(payload) {
-  const guests = payload.guests || [];
+function saveConvidados(payload) {
+  const convidados = payload.convidados || [];
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
 
-  if (!sheet || guests.length === 0) {
+  if (!sheet || convidados.length === 0) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  const rows = guests.map(guest => ([
-    guest.name || '',
-    guest.host || '',
-    guest.isHost ? 'host' : 'guest',
-    guest.timestamp ? new Date(guest.timestamp).toISOString() : new Date().toISOString()
+  const rows = convidados.map(convidado => ([
+    convidado.name || '',
+    convidado.host || '',
+    convidado.isHost ? 'host' : 'convidado',
+    convidado.timestamp ? new Date(convidado.timestamp).toISOString() : new Date().toISOString()
   ]));
 
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
@@ -82,21 +82,21 @@ function saveGuests(payload) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function getGuests() {
+function getConvidados() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
   if (!sheet) {
-    return { guests: [] };
+    return { convidados: [] };
   }
 
   const values = sheet.getDataRange().getValues();
-  const guests = values.slice(1).map(row => ({
+  const convidados = values.slice(1).map(row => ({
     name: row[0],
     host: row[1],
     isHost: row[2] === 'host',
     timestamp: row[3] ? new Date(row[3]).getTime() : Date.now()
   }));
 
-  return { guests };
+  return { convidados };
 }
 
 function upsertRanking(payload) {
@@ -150,13 +150,13 @@ function getRanking() {
 3. Deploy as Web App (Execute as: Me, Who has access: Anyone).
 4. Copy the Web App URL and replace `SHEETS_ENDPOINT` in `constants.ts`.
 
-Note: The app uses JSONP for reads (ranking/guests) and text/plain POST for writes to avoid CORS restrictions on Apps Script.
+Note: The app uses JSONP for reads (ranking/convidados) and text/plain POST for writes to avoid CORS restrictions on Apps Script.
 
 Sheet columns:
-- Guests tab:
+- Convidados tab:
   - Column A: Name
   - Column B: Host
-  - Column C: `host` or `guest`
+  - Column C: `host` or `convidado`
   - Column D: Timestamp (ISO string)
 - Ranking tab:
   - Column A: Player
