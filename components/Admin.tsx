@@ -6,6 +6,36 @@ interface AdminProps {
   onLogout: () => void;
 }
 
+
+const loadJsonp = <T,>(url: string, timeoutMs = 8000): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const callbackName = `jsonp_cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement('script');
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      script.remove();
+    };
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, timeoutMs);
+
+    (window as any)[callbackName] = (data: T) => {
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data);
+    };
+
+    script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${callbackName}`;
+    script.onerror = () => {
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('JSONP error'));
+    };
+    document.body.appendChild(script);
+  });
+};
+
 const Admin: React.FC<AdminProps> = ({ onLogout }) => {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [scores, setScores] = useState<GameResult[]>([]);
@@ -17,11 +47,7 @@ const Admin: React.FC<AdminProps> = ({ onLogout }) => {
 
       if (hasSheetsEndpoint) {
         try {
-          const response = await fetch(SHEETS_ENDPOINT);
-          if (!response.ok) {
-            throw new Error('Failed to load guests.');
-          }
-          const data = await response.json();
+          const data = await loadJsonp<{ guests: Guest[] }>(`${SHEETS_ENDPOINT}?type=guests`);
           const parsedGuests: Guest[] = (data.guests || []).map((guest: Guest, index: number) => ({
             id: guest.id || `${guest.timestamp || Date.now()}-${index}`,
             name: guest.name,

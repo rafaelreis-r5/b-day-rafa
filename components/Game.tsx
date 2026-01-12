@@ -12,6 +12,36 @@ const shuffleArray = (array: Question[]) => {
   return shuffled;
 };
 
+
+const loadJsonp = <T,>(url: string, timeoutMs = 8000): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const callbackName = `jsonp_cb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement('script');
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      script.remove();
+    };
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('JSONP timeout'));
+    }, timeoutMs);
+
+    (window as any)[callbackName] = (data: T) => {
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(data);
+    };
+
+    script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${callbackName}`;
+    script.onerror = () => {
+      window.clearTimeout(timeout);
+      cleanup();
+      reject(new Error('JSONP error'));
+    };
+    document.body.appendChild(script);
+  });
+};
+
 const Game: React.FC = () => {
   const [playerName, setPlayerName] = useState('');
   const [gameQuestions, setGameQuestions] = useState<Question[]>([]);
@@ -56,9 +86,7 @@ const Game: React.FC = () => {
   const loadLeaderboard = async () => {
     if (hasSheetsEndpoint) {
       try {
-        const response = await fetch(`${SHEETS_ENDPOINT}?type=ranking`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Failed to load ranking.');
-        const data = await response.json();
+        const data = await loadJsonp<{ ranking: GameResult[] }>(`${SHEETS_ENDPOINT}?type=ranking`);
         const parsed: GameResult[] = (data.ranking || []).map((entry: GameResult) => ({
           player: entry.player,
           score: entry.score,
@@ -106,7 +134,8 @@ const Game: React.FC = () => {
       try {
         await fetch(SHEETS_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ type: 'ranking', ...result })
         });
       } catch (error) {

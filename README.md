@@ -45,12 +45,19 @@ function doPost(e) {
 
 function doGet(e) {
   const type = (e && e.parameter && e.parameter.type) ? e.parameter.type : 'guests';
+  const callback = (e && e.parameter && e.parameter.callback) ? e.parameter.callback : '';
 
   if (type === 'ranking') {
-    return getRanking();
+    return outputJson(getRanking(), callback);
   }
 
-  return getGuests();
+  return outputJson(getGuests(), callback);
+}
+
+function outputJson(payload, callback) {
+  const text = callback ? `${callback}(${JSON.stringify(payload)})` : JSON.stringify(payload);
+  const output = ContentService.createTextOutput(text);
+  return output.setMimeType(callback ? ContentService.MimeType.JAVASCRIPT : ContentService.MimeType.JSON);
 }
 
 function saveGuests(payload) {
@@ -78,8 +85,7 @@ function saveGuests(payload) {
 function getGuests() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(SHEET_NAME);
   if (!sheet) {
-    return ContentService.createTextOutput(JSON.stringify({ guests: [] }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return { guests: [] };
   }
 
   const values = sheet.getDataRange().getValues();
@@ -90,8 +96,7 @@ function getGuests() {
     timestamp: row[3] ? new Date(row[3]).getTime() : Date.now()
   }));
 
-  return ContentService.createTextOutput(JSON.stringify({ guests }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return { guests };
 }
 
 function upsertRanking(payload) {
@@ -115,7 +120,7 @@ function upsertRanking(payload) {
     }
   }
 
-  if (targetRow == -1) {
+  if (targetRow === -1) {
     sheet.appendRow([player, score, timestamp.toISOString()]);
   } else {
     sheet.getRange(targetRow, 1, 1, 3).setValues([[player, score, timestamp.toISOString()]]);
@@ -128,8 +133,7 @@ function upsertRanking(payload) {
 function getRanking() {
   const sheet = SpreadsheetApp.getActive().getSheetByName(RANKING_SHEET_NAME);
   if (!sheet) {
-    return ContentService.createTextOutput(JSON.stringify({ ranking: [] }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return { ranking: [] };
   }
 
   const values = sheet.getDataRange().getValues();
@@ -139,13 +143,14 @@ function getRanking() {
     timestamp: row[2] ? new Date(row[2]).getTime() : Date.now()
   }));
 
-  return ContentService.createTextOutput(JSON.stringify({ ranking }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return { ranking };
 }
 ```
 
 3. Deploy as Web App (Execute as: Me, Who has access: Anyone).
 4. Copy the Web App URL and replace `SHEETS_ENDPOINT` in `constants.ts`.
+
+Note: The app uses JSONP for reads (ranking/guests) and text/plain POST for writes to avoid CORS restrictions on Apps Script.
 
 Sheet columns:
 - Guests tab:

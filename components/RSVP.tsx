@@ -50,15 +50,12 @@ const RSVP: React.FC = () => {
     }));
 
     try {
-      const response = await fetch(SHEETS_ENDPOINT, {
+      await fetch(SHEETS_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ guests })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save guest list.');
-      }
 
       const existingData = localStorage.getItem('guestList');
       const storedGuests = existingData ? JSON.parse(existingData) : [];
